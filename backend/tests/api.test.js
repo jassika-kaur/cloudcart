@@ -14,11 +14,27 @@ let customerId;
 let testCategory;
 let testProduct;
 let cartItemId;
+let memoryServer = null;
 
 beforeAll(async () => {
-  const testUri = process.env.MONGO_URI_TEST || 'mongodb://127.0.0.1:27017/cloudcart_test';
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(testUri);
+    const primaryUri = process.env.MONGO_URI_TEST || 'mongodb://cloudcart-mongodb:27017/cloudcart_test';
+    try {
+      await mongoose.connect(primaryUri, { serverSelectionTimeoutMS: 3000 });
+    } catch (e) {
+      try {
+        await mongoose.connect('mongodb://127.0.0.1:27017/cloudcart_test', { serverSelectionTimeoutMS: 3000 });
+      } catch (err2) {
+        try {
+          const { MongoMemoryServer } = require('mongodb-memory-server');
+          memoryServer = await MongoMemoryServer.create({ instance: { dbName: 'cloudcart_test' } });
+          await mongoose.connect(memoryServer.getUri());
+        } catch (memErr) {
+          console.error('Failed to connect to any MongoDB instance:', memErr);
+          throw memErr;
+        }
+      }
+    }
   }
 
   // Clear test DB
@@ -227,5 +243,16 @@ describe('CloudCart API Test Suite', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.stats).toBeDefined();
     expect(res.body.stats.totalProducts).toBeGreaterThanOrEqual(1);
+  });
+
+  afterAll(async () => {
+    try {
+      await mongoose.disconnect();
+      if (memoryServer) {
+        await memoryServer.stop();
+      }
+    } catch (e) {
+      console.error('Error during cleanup:', e);
+    }
   });
 });
