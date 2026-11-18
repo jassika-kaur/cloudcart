@@ -83,16 +83,6 @@ beforeAll(async () => {
   adminToken = adminLoginRes.body.token;
 });
 
-afterAll(async () => {
-  await User.deleteMany();
-  await Category.deleteMany();
-  await Product.deleteMany();
-  await Cart.deleteMany();
-  await Wishlist.deleteMany();
-  await Order.deleteMany();
-  await mongoose.disconnect();
-});
-
 describe('CloudCart API Test Suite', () => {
   // 1. User Registration
   test('POST /api/auth/register should register a new customer', async () => {
@@ -247,12 +237,20 @@ describe('CloudCart API Test Suite', () => {
 
   afterAll(async () => {
     try {
-      await mongoose.disconnect();
+      if (mongoose.connection.readyState !== 0) {
+        await User.deleteMany();
+        await Category.deleteMany();
+        await Product.deleteMany();
+        await Cart.deleteMany();
+        await Wishlist.deleteMany();
+        await Order.deleteMany();
+        await mongoose.disconnect();
+      }
       if (memoryServer) {
         await memoryServer.stop();
       }
     } catch (e) {
-      console.error('Error during cleanup:', e);
+      console.warn('Cleanup warning:', e.message);
     }
   });
 });
