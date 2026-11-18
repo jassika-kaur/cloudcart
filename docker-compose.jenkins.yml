@@ -1,0 +1,24 @@
+# ==============================================================================
+# CloudCart - Local Jenkins CI/CD Controller Orchestration
+# ==============================================================================
+services:
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+    container_name: cloudcart-jenkins
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      - JENKINS_OPTS=--httpPort=8080
+      - TZ=Asia/Kolkata
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      # Bind mount host docker daemon to enable Docker-in-Docker capabilities
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  jenkins_data:
+    name: cloudcart_jenkins_data

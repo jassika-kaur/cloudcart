@@ -1,0 +1,35 @@
+# ==============================================================================
+# CloudCart – Terraform Variable Values Example
+# Copy this file to terraform.tfvars and customize with your parameters
+# ==============================================================================
+
+aws_region   = "ap-south-1"
+environment  = "production"
+project_name = "cloudcart"
+
+# --- VPC & Networking ---
+vpc_cidr                  = "10.0.0.0/16"
+availability_zones        = ["ap-south-1a", "ap-south-1b"]
+public_subnet_cidrs       = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs      = ["10.0.10.0/24", "10.0.20.0/24"]
+enable_single_nat_gateway = true # Set to true to minimize NAT Gateway costs
+
+# --- Compute & Auto Scaling ---
+instance_type              = "t3.small" # Can use t2.micro or t3.micro for Free Tier testing
+asg_min_size               = 2
+asg_max_size               = 4
+asg_desired_capacity       = 2
+asg_target_cpu_utilization = 70.0
+
+# --- Docker Hub Images ---
+frontend_image = "jassikakaur/cloudcart-frontend:v1.0.0"
+backend_image  = "jassikakaur/cloudcart-backend:v1.0.0"
+
+# --- Application Configuration ---
+mongo_uri   = "mongodb://admin:CloudCart2026Secure@mongodb:27017/cloudcart?authSource=admin"
+jwt_secret  = "c10udc4rt_jwt_sup3r_s3cr3t_k3y_pr0duct10n_2026_mumb41!"
+alert_email = "devops-lead@cloudcart.internal"
+
+# --- Ingress SSL (Set true and provide ARN once ACM cert is requested) ---
+enable_https        = false
+acm_certificate_arn = ""

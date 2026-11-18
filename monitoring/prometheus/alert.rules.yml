@@ -1,0 +1,45 @@
+# ==============================================================================
+# CloudCart - Prometheus Alerting Rules
+# ==============================================================================
+groups:
+  - name: cloudcart_infrastructure_alerts
+    rules:
+      # 1. Application Downtime Alert
+      - alert: CloudCartBackendDown
+        expr: up{job="cloudcart-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CloudCart Backend Service is Down"
+          description: "Backend container at {{ $labels.instance }} has been unreachable for more than 1 minute."
+
+      # 2. High CPU Utilization Alert (> 80%)
+      - alert: HighEC2CpuUtilization
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 80
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Host CPU Utilization (> 80%)"
+          description: "EC2 CPU usage on {{ $labels.instance }} is currently at {{ $value | printf \"%.2f\" }}%."
+
+      # 3. High Memory Utilization Alert (> 85%)
+      - alert: HighEC2MemoryUtilization
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Host Memory Utilization (> 85%)"
+          description: "EC2 RAM usage on {{ $labels.instance }} is currently at {{ $value | printf \"%.2f\" }}%."
+
+      # 4. High Disk Space Utilization Alert (> 90%)
+      - alert: HighEC2DiskUtilization
+        expr: 100 - ((node_filesystem_avail_bytes{fstype=~"ext4|xfs|9p", mountpoint=~"/|/mnt/host/c"} / node_filesystem_size_bytes{fstype=~"ext4|xfs|9p", mountpoint=~"/|/mnt/host/c"}) * 100) > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High Host Disk Usage (> 90%)"
+          description: "EBS volume root mount on {{ $labels.instance }} is {{ $value | printf \"%.2f\" }}% full."

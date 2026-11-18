@@ -1,0 +1,45 @@
+# ===================================================
+# CloudCart - Prometheus Global Configuration
+# ===================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+# Alertmanager configuration
+alerting:
+  alertmanagers: []
+
+# Rule files for automated monitoring alerts
+rule_files:
+  - 'alert.rules.yml'
+
+# Scrape configurations
+scrape_configs:
+  # 1. Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. CloudCart Node.js/Express Backend application metrics
+  - job_name: 'cloudcart-backend'
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['backend:5000']
+        labels:
+          app: 'cloudcart'
+          service: 'backend'
+          environment: 'production'
+
+  # 3. Node Exporter (EC2 Host Hardware, CPU, Memory & Disk Telemetry)
+  - job_name: 'node-exporter'
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          app: 'cloudcart'
+          service: 'node-exporter'
+          environment: 'production'

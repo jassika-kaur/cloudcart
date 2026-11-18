@@ -1,0 +1,166 @@
+# ==============================================================================
+# CloudCart - Cloud-Native E-Commerce Platform
+# Docker Compose Orchestraction (MERN Stack + Prometheus & Grafana Monitoring)
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. MongoDB Database Engine
+  # ----------------------------------------------------------------------------
+  mongodb:
+    image: mongo:7.0
+    container_name: cloudcart-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: cloudcart
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - cloudcart-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ----------------------------------------------------------------------------
+  # 2. Node.js & Express REST API Backend
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cloudcart-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/cloudcart
+      JWT_SECRET: ${JWT_SECRET:-cloudcart_super_secret_jwt_key_2026_secure_key}
+      JWT_EXPIRES_IN: 7d
+      CLIENT_URL: http://localhost:3000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - cloudcart-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ----------------------------------------------------------------------------
+  # 3. React Vite + Nginx Alpine Frontend
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cloudcart-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - cloudcart-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ----------------------------------------------------------------------------
+  # 4. Prometheus Monitoring Server
+  # ----------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.53.3
+    container_name: cloudcart-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    depends_on:
+      - backend
+    networks:
+      - cloudcart-network
+
+  # ----------------------------------------------------------------------------
+  # 5. Grafana Analytics & Metrics Dashboard
+  # ----------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: cloudcart-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - cloudcart-network
+
+  # ----------------------------------------------------------------------------
+  # 6. Prometheus Node Exporter (EC2 Host Hardware & OS Metrics)
+  # ----------------------------------------------------------------------------
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: cloudcart-node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - cloudcart-network
+
+# ==============================================================================
+# Persistent Named Volumes
+# ==============================================================================
+volumes:
+  mongodb_data:
+    name: cloudcart_mongodb_data
+  backend_uploads:
+    name: cloudcart_backend_uploads
+  prometheus_data:
+    name: cloudcart_prometheus_data
+  grafana_data:
+    name: cloudcart_grafana_data
+
+# ==============================================================================
+# Isolated Bridge Network
+# ==============================================================================
+networks:
+  cloudcart-network:
+    name: cloudcart-network
+    driver: bridge

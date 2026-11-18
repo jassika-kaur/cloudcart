@@ -1,0 +1,38 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CloudCartS3BucketLevelAccess",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": "arn:aws:s3:::cloudcart-product-images-ap-south-1-major-project"
+    },
+    {
+      "Sid": "CloudCartS3ObjectLevelReadWrite",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::cloudcart-product-images-ap-south-1-major-project/*"
+    },
+    {
+      "Sid": "DenyInsecureHTTPConnections",
+      "Effect": "Deny",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::cloudcart-product-images-ap-south-1-major-project",
+        "arn:aws:s3:::cloudcart-product-images-ap-south-1-major-project/*"
+      ],
+      "Condition": {
+        "Bool": {
+          "aws:SecureTransport": "false"
+        }
+      }
+    }
+  ]
+}

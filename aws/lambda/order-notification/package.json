@@ -1,0 +1,23 @@
+{
+  "name": "cloudcart-order-notification-lambda",
+  "version": "1.0.0",
+  "description": "Serverless Order Confirmation & Email Notification Service for CloudCart",
+  "main": "index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.758.0"
+  },
+  "keywords": [
+    "aws-lambda",
+    "serverless",
+    "ecommerce",
+    "ses",
+    "notifications",
+    "cloudcart"
+  ],
+  "author": "CloudCart DevOps Team",
+  "license": "ISC"
+}
